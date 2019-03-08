@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Mill City Church - Lighting Controller</title>
+    <style>
+        body {
+            background-color: black;
+            font: 1em sans-serif;
+        }
+
+        button {
+            margin: 20px 5px 20px 5px;
+            font-size: 1.2em;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid rgb(212, 212, 212);
+            box-shadow: 0 3px 3px darkgray;
+        }
+
+        button:hover {
+            background-color: #2196F3;
+        }
+
+        #logo {
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        #logo img {
+            height: 82px;
+            width: 418px;
+        }
+
+        #controls {
+            background-color: lightgrey;
+            border-radius: 20px;
+            text-align: center;
+            padding: 10px;
+            width: 360px;
+            margin: 20px auto;
+        }
+
+        /* The switch - the box around the slider */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        /* Hide default HTML checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* The slider */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        /* Rounded sliders */
+        .slider.round {
+            border-radius: 34px;
+            box-shadow: 0 3px 3px darkgray;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="logo">
+        <img src="logo.png" alt="Mill City Church">
+    </div>
+    <div id="controls">
+        <div id="sockets"></div>
+        <div>
+            <button id="all-on">All On</button>
+            <button id="all-off">All Off</button>
+        </div>
+    </div>
+    <script>
+(() => {
+
+const controller = document.getElementById('sockets');
+
+const sockets = []
+const configs = [
+    { "name": "Chandelier", "ip": "192.168.1.120" },
+    { "name": "Stage Lights", "ip": "192.168.1.102"/*, "exclude": true */}
+]
+
+const fetchError = (socket) => {
+    console.error('Couldn\'t connect to "' + socket.name + '." (ip: ' + socket.ip + ')')
+}
+
+const updateSocket = (url, socket) => {
+    fetch(url)
+        .then(res => res.json())
+        .then((res) => { socket.checked = (res.POWER === 'ON') })
+        .catch(() => { fetchError(socket) })
+}
+
+configs.forEach((s, i) => {
+    const element = document.createElement('div')
+    const html = []
+
+    html.push('<h3>' + s.name + (s.exclude ? ' (excluded)' : ''))
+    html.push('</h3><label class="switch">')
+    html.push('<input type="checkbox" id="s-' + i + '">')
+    html.push('<span class="slider round"></span></label>')
+
+    element.innerHTML = html.join('')
+    controller.appendChild(element)
+    const socket = document.getElementById('s-' + i)
+    
+    const url = 'http://' + s.ip + '/cm?cmnd=Power'
+
+    socket.addEventListener('click', (e) => {
+        fetch(url + '%20' + (e.target.checked ? 'ON' : 'OFF'))
+            .then((res) => res.json())
+            .then((res) => { socket.checked = (res.POWER === 'ON') })
+            .catch(() => { fetchError(socket) })
+        socket.blur()
+    })
+
+    if (!s.exclude) sockets.push(socket)
+
+    updateSocket(url, socket)
+})
+
+const buttonOn = document.getElementById('all-on')
+const buttonOff = document.getElementById('all-off')
+
+buttonOn.addEventListener('click', (e) => {
+    sockets.forEach((s) => { if (!s.checked) s.click() })
+    buttonOn.blur()
+})
+
+buttonOff.addEventListener('click', (e) => {
+    sockets.forEach((s) => { if (s.checked) s.click() })
+    buttonOff.blur()
+})
+
+})()
+    </script>
+</body>
+
+</html>
